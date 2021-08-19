@@ -1,0 +1,91 @@
+---
+title: "AN11 - Immunoinformatics"
+author: "Group 7 - Galli, Känel, Kruta, Stalder"
+date: "12 5 2021"
+output: html_document
+---
+
+```{r libraries}
+
+library(keras)
+library(tidyverse)
+library(ggseqlogo)
+library(PepTools)
+library(Biostrings)
+```
+
+```{r read tcells}
+# Read in the file you want to analyze
+# !! Make sure to set your working directory first! --> setwd("C:/Users/xx/your_folderpath")
+
+tcr_dat <- read.csv("data/tcell_full_v3.csv", sep = ",")
+```
+
+```{r transform}
+colnames(tcr_dat) = tcr_dat[1, ] # the first row will be the header
+tcr_dat = tcr_dat[-1, ]          # removing the first row.
+reqd <- as.vector(c("Object Type","Description")) # Storing the columns I want to extract as a vector
+tcr_dat <- tcr_dat[,reqd]       # Extracting only four columns
+```
+
+```{r filter}
+# filter the loadaed data for the columns you need. We limit the chain of acids to 10
+tcr_dat %>% group_by(`Object Type`) %>% summarise(n = n())
+tcr_dat <- tcr_dat[nchar(as.character(tcr_dat$Description))==10,]
+tcr_dat <- tcr_dat[!grepl("Discontinuous", tcr_dat$`Object Type`),]
+tcr_dat <- tcr_dat[!grepl("Non-", tcr_dat$`Object Type`),]
+tcr_dat <- tcr_dat[!grepl("B", tcr_dat$Description),]
+tcr_dat <- tcr_dat[!grepl("J", tcr_dat$Description),]
+tcr_dat <- tcr_dat[!grepl("O", tcr_dat$Description),]
+tcr_dat <- tcr_dat[!grepl("U", tcr_dat$Description),]
+tcr_dat <- tcr_dat[!grepl("Z", tcr_dat$Description),]
+```
+
+```{r plot}
+tcr_dat <- tcr_dat[, 2]
+ggseqlogo(tcr_dat)
+```
+
+```{r counts}
+# derive the count matrix
+tcr_dat %>% pssm_counts %>% .[1:7,1:10]
+```
+
+```{r frequenz}
+# derive the frequency matrix
+tcr_dat %>% pssm_freqs %>% .[1:7,1:10]
+```
+
+```{r bits}
+# derive the bits of information matrix
+tcr_dat %>% pssm_freqs %>% pssm_bits %>% .[1:7,1:10]
+```
+
+```{r read bcells}
+# filter the loadaed data for the columns you need. We limit the chain of acids to 10
+bcr_dat <- read.csv("data/bcell_full_v3.csv", sep = ",")
+```
+
+```{r transform}
+colnames(bcr_dat) = bcr_dat[1, ] # the first row will be the header
+bcr_dat = bcr_dat[-1, ]          # removing the first row.
+reqd <- as.vector(c("Object Type","Description")) # Storing the columns I want to extract as a vector
+bcr_dat <- bcr_dat[,reqd]       # Extracting only four columns
+```
+
+```{r filter}
+bcr_dat %>% group_by(`Object Type`) %>% summarise(n = n())
+bcr_dat <- bcr_dat[nchar(as.character(bcr_dat$Description))==10,]
+bcr_dat <- bcr_dat[!grepl("Discontinuous", bcr_dat$`Object Type`),]
+bcr_dat <- bcr_dat[!grepl("Non-", bcr_dat$`Object Type`),]
+bcr_dat <- bcr_dat[!grepl("B", bcr_dat$Description),]
+bcr_dat <- bcr_dat[!grepl("J", bcr_dat$Description),]
+bcr_dat <- bcr_dat[!grepl("O", bcr_dat$Description),]
+bcr_dat <- bcr_dat[!grepl("U", bcr_dat$Description),]
+bcr_dat <- bcr_dat[!grepl("Z", bcr_dat$Description),]
+```
+
+```{r plot}
+bcr_dat <- bcr_dat[, 2]
+ggseqlogo(bcr_dat)
+```

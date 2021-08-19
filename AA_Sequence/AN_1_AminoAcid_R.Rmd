@@ -1,0 +1,26 @@
+---
+title: 'Task_1: Simulation of AminoAcid Sequence'
+author: "Galli, Känel, Kruta, Stalder"
+date: "14 3 2021"
+output: html_document
+---
+
+### Simulation of Antibody Sequence 110 amino acids long
+
+#### To learn (Antibody):
+
+Antibodies are immune system-related proteins called immunoglobulins. Each antibody consists of four polypeptides-- two heavy chains and two light chains joined to form a "Y" shaped molecule. The amino acid sequence in the tips of the "Y" varies greatly among different antibodies. This variable region, composed of 110-130 amino acids, give the antibody its specificity for binding antigen.
+
+#### To learn (Amino Acids):
+
+Amino acids are chemical connection between an aminogroup (containing N - Nitrogen) and an carbon acid group (containing C - Carbon and O - Oxigen), They are found in all living things and are, amongst other functions, building blocks for proteins. The following 20 amino acids exist
+
+```{r 110aa}
+### Amino Acids: GALMFWKQESPVICYHRNDT
+library(stringr)
+stri_rand_strings(10, 110, '[GALMFWKQESPVICYHRNDT]')
+
+# Needed library: stringi (character string/text/natural language processing tools)
+# stri_rand_strings: Generates (pseudo)random strings of desired lengths.
+# 1, as the task is to generate one string | 110 as the task is to have it 110char long |GALMFWKQESPVICYHRNDT for AA 
+```

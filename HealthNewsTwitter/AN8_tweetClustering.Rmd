@@ -1,0 +1,77 @@
+---
+title: "AN8_tweetClustering"
+author: "Group 7 - Galli, Känel, Kruta, Stalder"
+date: "27 4 2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r read}
+library(tm)
+library(cluster)
+library(readr)
+
+# Read the file you want to analyze, make sure the Text Mining library is installed
+# !! Make sure to set your working directory first! --> setwd("C:/Users/xx/your_folderpath")
+
+tweets <- readLines("Health-News-Tweets/bbchealth.txt")
+```
+
+```{r setup}
+
+#Build the corpus
+corpus <- Corpus(VectorSource(tweets))
+removeURL <- function(x) gsub("http://([[:alnum:]|[:punct:]])+", "", x)
+corpus <- tm_map(corpus, content_transformer(removeURL))
+#corpus <- tm_map(corpus, content_transformer(tolower))
+# remove punctuation
+corpus <- tm_map(corpus, removePunctuation) 
+# remove numbers
+corpus <- tm_map(corpus, removeNumbers)
+# add extra stop words for example 'available' or 'via'
+myStopwords <- c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+#myStopwords <- c("mon", "tue", "wed", "thu", "fri", "sat", "sun", "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+# remove stopwords from corpus
+corpus <- tm_map(corpus, removeWords, myStopwords)
+
+#Create a matrix related to the terms. Set the minimum Wordlength to 1 until Infinity
+TermMatrix <- TermDocumentMatrix(corpus, control = list(minWordLenght=c(1, Inf)))
+t <- removeSparseTerms(TermMatrix, sparse = 0.98)
+m <- as.matrix(t)
+```
+
+
+```{r plot}
+#Plot the frequent terms
+frequent <- rowSums(m)
+# Set the frequency to terms in our Matrix which  have a certain amount of Repetitions (30 times)
+frequent <- subset(frequent, frequent >= 30)
+# Create barplot from the most frequent terms with the wished criteria of the axis
+barplot(frequent, las=2)
+```
+
+```{r dendrogram}
+# Assign the matrix and its scale into a dendrogram
+distance <- dist(scale(m))
+# Print the distances from one frequent term to another --> Calculate the distance from the words within the document. If distance is high --> same Cluster is unlikely, if distance is low, the oposite.
+print(distance, digits = 2)
+```
+
+```{r cluster}
+# Create a hierarchical cluster of the terms to estimate the existing clusters
+# The Method "ward.D" is a common clustering method in R to reduce variances for clustering --> tries to keep the possible cluster together in a visual way.
+hCluster <- hclust(distance, method = "ward.D")
+# by reducing the hang attribute to a negative value, some "hanging" terms can be reduced, which supports the decision making for clusters. The are more or less 12 to 15 possible clusters visualized.
+plot(hCluster, hang=-1)
+rect.hclust(hCluster, k=12)
+```
+
+```{r nonhierarchical kmeans clustering}
+#Assign the hierarchical matrix into a new string for performing the nonhierarchical clustering
+m1 <- t(m)
+# Set the number of Clusters, this variable can be modified
+k <- 12
+kc <- kmeans(m1, k)
+print(kc)
+```

@@ -1,0 +1,185 @@
+---
+title: "AN9_ehr_analysis"
+author: "Group 7 - Galli, Känel, Kruta, Stalder"
+date: "3 5 2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r read}
+# Make sure the needed libraries are installed and load them within the next step
+library(cluster)
+library(readr)
+library(tm)
+library(wordcloud)
+library(factoextra)
+library(ggplot2)
+
+# Read in the dataset into your dataframe
+# !! Make sure to set your working directory first! --> setwd("C:/Users/xx/your_folderpath")
+my_data <- read.csv("100-Patients/PatientCorePopulatedTable.txt", sep = "\t", fileEncoding="UTF-8-BOM")
+```
+
+```{r firstplot}
+# Get first insight to the dataset. For example, let's have a look about the balance of the PatientRace within the data
+ggplot(my_data, aes(x=PatientRace)) + geom_bar()
+prop.table(table(my_data$PatientRace))
+```
+
+```{r secondplot}
+# Get first insight to the dataset. For example, let's have a look about the balance of the PatientGender within the data
+ggplot(my_data, aes(x=PatientGender)) + geom_bar()
+prop.table(table(my_data$PatientGender))
+```
+
+```{r thirdplot}
+# Get first insight to the dataset. For example, let's have a look about the balance of the PatientMaritalStatus within the data
+ggplot(my_data, aes(x=PatientMaritalStatus)) + geom_bar()
+prop.table(table(my_data$PatientMaritalStatus))
+```
+
+```{r convert}
+# Calculate the patients current age and safe the values within a new column with numerical data type
+my_data$PatientDateOfBirth <- as.Date(my_data$PatientDateOfBirth)
+my_data$PatientCurrentAge = as.numeric(difftime(Sys.Date(),my_data$PatientDateOfBirth, units = "weeks"))/52.25
+str(my_data)
+head(my_data)
+```
+
+```{r identify}
+# As the IDs have many characters, assign a consecutive Patient Number for being able to visualize the clustering
+my_data$PatientNumber <- 1:nrow(my_data)
+#check the data
+head(my_data)
+```
+
+```{r reorder}
+# Move some columns within their position and define the order within the dataframe
+my_data <- my_data [ , c("PatientNumber", "PatientID", "PatientGender", "PatientCurrentAge", "PatientDateOfBirth", "PatientRace", "PatientMaritalStatus", "PatientLanguage", "PatientPopulationPercentageBelowPoverty")]
+```
+
+```{r scatter}
+# Create a scatterplot from only available numeric variables by PatientGender, by exncluding few outliers
+plot(my_data$PatientPopulationPercentageBelowPoverty, my_data$PatientCurrentAge, xlab = "Population Poverty", ylab = "Patient Age",xlim=c(0,25), ylim=c(0,105), pch=20, col="red")
+points(my_data$PatientPopulationPercentageBelowPoverty[my_data$PatientGender=='Female'], my_data$PatientCurrentAge[my_data$PatientGender=='Female'], pch=20, col="blue")
+```
+
+```{r scatterpoints}
+# Create a scatterplot from only available numeric variables by PatientRace, by exncluding few outliers
+plot(my_data$PatientPopulationPercentageBelowPoverty, my_data$PatientCurrentAge, xlab = "Population Poverty", ylab = "Patient Age", xlim=c(0,25), ylim=c(0,105), pch=20, col="red")
+points(my_data$PatientPopulationPercentageBelowPoverty[my_data$PatientRace=='African American'], my_data$PatientCurrentAge[my_data$PatientRace=='African American'], pch=20, col="blue")
+points(my_data$PatientPopulationPercentageBelowPoverty[my_data$PatientRace=='Asian'], my_data$PatientCurrentAge[my_data$PatientRace=='Asian'], pch=20, col="green")
+points(my_data$PatientPopulationPercentageBelowPoverty[my_data$PatientRace=='Unknown'], my_data$PatientCurrentAge[my_data$PatientRace=='Unknown'], pch=20, col="black")
+```
+
+```{r agglomerative}
+# Compute agglomerative clustering with the help of the euclidean distance
+d <- dist(my_data, method = "euclidean")
+# Hierarchical clustering
+hca <- hclust(d, method = "ward.D2")
+# Compuute Agglomerative coefficient
+hca$ac
+## [1] NULL
+
+# Plot the obtained dendrogram
+plot(hca, cex = 0.6, hang = -1, main = "Dendrogram Agglomerative Clustering")
+rect.hclust(hca, k=8)
+
+```
+
+```{r agnes}
+# Compute with another method --> agnes (predefined agglomerative clustering method)
+hcagnes <- agnes(my_data, method = "complete")
+# Agglomerative coefficient
+hcagnes$ac
+## [1] 0.9915077
+
+# Plot the obtained dendrogram
+pltree(hcagnes, cex = 0.6, hang = -1, main = "Dendrogram Agnes Clustering")
+rect.hclust(hcagnes, k=12)
+```
+
+```{r divisive}
+# Compute divisive clustering with the help of the predefined method called "diana"
+hcd <- diana(my_data)
+
+# Divise coefficient
+hcd$dc
+## [1] 0.9898009
+
+# Plot the obtained dendrogram
+pltree(hcd, cex = 0.6, hang = -1, main = "Dendrogram Divisive Clustering")
+rect.hclust(hcd, k=12)
+```
+
+```{r clusterplot}
+# Plot the before obtained agglomerative dendrogram with the same amounts of defined clusters
+clust <- cutree(hca, k = 8)
+# from ‘factoextra’ package --> make sure it is installed and loaded
+fviz_cluster(list(data = d, cluster = clust))
+```
+
+```{r textmining}
+# Read in new data regarding described diagnosis
+newdata <- read.csv("C:/Users/jan_k/Documents/FHNW/dth/100-Patients/AdmissionsDiagnosesCorePopulatedTable.txt", sep = "\t", fileEncoding="UTF-8-BOM")
+# Build the corpus
+myCorpus <- Corpus(VectorSource(newdata$PrimaryDiagnosisDescription))
+# convert to lower case # myCorpus <- tm_map(myCorpus, tolower)
+myCorpus <- tm_map(myCorpus, content_transformer(tolower))
+# remove punctuation
+myCorpus <- tm_map(myCorpus, removePunctuation) 
+# remove numbers
+myCorpus <- tm_map(myCorpus, removeNumbers)
+# add extra stop words for example 'available' or 'via'
+myStopwords <- c(stopwords("english"), "available", "via", "classified", "diseases", "disease", "left", "elsewhere", "due", "right", "left", "disorder", "disorders", "type", "chemical", "without", "encounter", "factor", "behavior")
+# remove stopwords from corpus
+myCorpus <- tm_map(myCorpus, removeWords, myStopwords)
+
+#Create a matrix related to the terms. Set the minimum Wordlength to 2 until Infinity
+TermMatrix <- TermDocumentMatrix(myCorpus, control = list(minWordLenght=c(2, Inf)))
+t <- removeSparseTerms(TermMatrix, sparse = 0.98)
+m <- as.matrix(t)
+```
+
+```{r frequency}
+# Plot the frequent terms
+frequent <- rowSums(m)
+# Set the frequency to terms in our Matrix which  have a certain amount of Repetitions (at least 3 times)
+frequent <- subset(frequent, frequent>=3)
+# Create barplot from the most frequent terms with the wished criteria of the axis
+barplot(frequent, las=2)
+```
+
+```{r wordcloud}
+# calculate the frequency of words and sort it by frequency
+word.freq <- sort(rowSums(m), decreasing = T)
+wordcloud(words = names(word.freq), freq = word.freq, min.freq = 2,
+          random.order = F)
+```
+
+```{r calculating}
+# Assign the matrix and its scale into a dendrogram
+distance <- dist(scale(m))
+# Print the distances from one frequent term to another --> Calculate the distance from the words within the document. If distance is high --> same Cluster is unlikely, if distance is low, the opposite.
+print(distance, digits = 2)
+```
+
+```{r termhierarchie}
+# Create a hierarchical cluster of the terms to estimate the existing clusters
+TermCluster <- hclust(distance, method = "ward.D")
+# by reducing the hang attribute to a negative value, some "hanging" terms can be reduced, which supports the decision making for clusters. The are more or less 10 possible clusters visualized.
+plot(TermCluster, hang=-1, main = "Dendrogram of Diagnosis Terms")
+rect.hclust(TermCluster, k=10)
+```
+
+```{r kmeans clustering}
+#Assign the hierarchical matrix into a new string for performing the non-hierarchical clustering with kmeans
+m1 <- t(m)
+# Set the number of Clusters, this variable can be modified
+k <- 10
+kc <- kmeans(m1, k)
+print(kc)
+```
+
+

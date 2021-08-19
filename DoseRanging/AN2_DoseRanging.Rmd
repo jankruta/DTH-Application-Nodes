@@ -1,0 +1,77 @@
+---
+title: "AN2_DoseRanging"
+author: "Group 7 - Galli, Känel, Kruta, Stalder"
+date: "16 3 2021"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+#Discover the Dose Range (Description of exercise)
+
+Clinical trials phase I and II evaluate drug safety in the dosefinding studies. These studies aim at identifying the maximum tolerated dose (MTD).
+
+
+```{r data loading}
+# install the needed package "dfpk* and load it
+library(dfpk)
+
+
+# creating a vector with the doses to test
+doses <- c(12.59972, 34.65492, 44.69007, 60.80685, 83.68946, 100.37111)
+theta <- 0.2
+options <- list(nchains = 4, niter = 4000, nadapt = 0.9)
+```
+
+
+```{r dose determine}
+#vector with the AUC values of each patient
+AUCs <- c(1.208339, 5.50604, 6.879835, 3.307928, 3.64243, 10.271291, 3.885522, 3.086622, 2.537158, 5.525917, 8.522176, 4.642741, 11.048531, 10.246976, 5.226807)
+```
+
+
+```{r vector}
+#Vector which defining the dose level which patients should get. for example: patient 1 get the lowest AUCs dose, patients 10 & 11 get the fifth lowest dosis
+x <- c(1, 2, 3, 4, 5, 6, 4, 4, 4, 5, 5, 4, 4, 5, 5)
+
+#Binary classification regarding the toxicity
+y <- c(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0)
+```
+
+```{r choose the method}
+#function created to choose the desired method by input within the console
+choice <- menu(c("pktox", "pkpop", "pklogit")) 
+
+if (choice == 1) {
+  choosenModel <- "pktox"
+} else if(choice == 2) {
+  choosenModel <- "pkpop"
+} else if(choice == 3){
+  choosenModel <- "pklogit"
+}
+
+```
+
+```{r nextD}
+#Vector to define the  nextDose for the calculation
+nextD <- nextDose(model = choosenModel, y = y, AUCs = AUCs, doses = doses, x = x, theta = theta, options = options)
+
+#creating print of the next calculated dose
+print(nextD)
+
+#plots the dose
+plot(nextD)
+```
+
+
+
+```{r control output}
+#Control output where the method can be added manually to see if the function above works
+nextD <- nextDose(model = "pktox", y = y, AUCs = AUCs, doses = doses, x = x, theta = theta, options = options)
+
+#creating print of the next calculated dose
+print(nextD)
+
+#plots the dose
+plot(nextD)
+```
